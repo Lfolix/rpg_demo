@@ -323,6 +323,7 @@ class Stone(MineObject):
             self.x -= self.player.speed
 
     def draw(self, screen):
+        Text(str(self.health), 15, 'Blue', self.x, self.y).draw(screen)
         self.rect.topleft = self.x, self.y
         print(self.health)
         if self.health > 0:
