@@ -16,7 +16,7 @@ tiles = [
 
 current_tiles = [
     (70, 280),
-    (65, 410)
+    (65, 410),
 ]
 
 alive = False
@@ -40,6 +40,7 @@ def load(screen, player):
     global alive
 
     sur_slot = -1
+    sur_slot_2 = -1
 
     mouse = pygame.mouse.get_pressed()
     mouse_pos = pygame.mouse.get_pos()
@@ -113,8 +114,7 @@ def load(screen, player):
 
 
             # Отрисовка предмета
-            sur_slot = -1
             print(i)
 
-            sur_slot += 1
-            i.draw(screen, current_tiles[sur_slot])  # Здесь i - это объект Item, который должен иметь метод draw
+            sur_slot_2 += 1
+            i.draw(screen, current_tiles[sur_slot_2])  # Здесь i - это объект Item, который должен иметь метод draw
