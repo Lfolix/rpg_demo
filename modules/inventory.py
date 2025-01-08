@@ -64,6 +64,9 @@ def load(screen, player):
                             player.enable_inventory.append(del_item)
                             print("ok")
 
+                    if mouse[1]:
+                        player.inventory.remove(i)
+
 
             sur_slot += 1
             i.draw(screen, tiles[sur_slot])  # Здесь i - это объект Item, который должен иметь метод draw
@@ -91,6 +94,9 @@ def load(screen, player):
 
                         else:
                             i.not_show_parameters = False
+
+                    if mouse[1]:
+                        player.inventory.remove(i)
 
                 # Отображаем параметры только если show_parameters истинно
                 if i.show_parameters and not i.not_show_parameters:

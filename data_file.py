@@ -84,13 +84,14 @@ class ButtonObject(Object):
 #Hard objects
 
 class AliveObject:
-    def __init__(self, x, y, directory_animation, file_path, speed):
+    def __init__(self, x, y, directory_animation, file_path, speed, health):
         self.x = x
         self.y = y
         self.directory_animation = os.listdir(directory_animation)
         self.directory_animation.sort(key = natural_sort_key)
         self.file_path = file_path
         self.speed = speed
+        self.health = health
 
         self.anim_down = [
             pygame.image.load(f'{self.file_path}{self.directory_animation[0]}'),
@@ -132,18 +133,22 @@ class AliveObject:
             self.anim_count = 0
 
 class PlayerObject(AliveObject):
-    def __init__(self, x, y, directory_animation, file_path, speed):
-        super().__init__(x, y, directory_animation, file_path, speed)
+    def __init__(self, x, y, directory_animation, file_path, speed, health):
+        super().__init__(x, y, directory_animation, file_path, speed, health)
 
         self.disable_inventory = list()
         self.enable_inventory = list()
+        self.xp = 0
+        self.hunger = 100
 
     def draw(self, screen):
-        self.rect.topleft = (self.x, self.y)
-        print(self.disable_inventory)
-        screen.blit(self.direction[self.anim_count], (370, 270))
-        self.anim_walk(pygame.key.get_pressed())
-        self.update_animation()
+        if self.health > 0:
+            self.hunger -= 0.01
+            self.rect.topleft = (self.x, self.y)
+            print(self.disable_inventory)
+            screen.blit(self.direction[self.anim_count], (370, 270))
+            self.anim_walk(pygame.key.get_pressed())
+            self.update_animation()
 
     def anim_walk(self, key):
         if key[pygame.K_w]:
@@ -162,45 +167,46 @@ class PlayerObject(AliveObject):
             self.anim_count = 1
 
 class HostileNPC_Object(AliveObject):
-    def __init__(self, x, y, directory_animation, file_path, speed, player):
-        super().__init__(x, y, directory_animation, file_path, speed)
+    def __init__(self, x, y, directory_animation, file_path, speed, player, health):
+        super().__init__(x, y, directory_animation, file_path, speed, health)
         self.player = player
 
     def follow(self):
-               # Вычисляем разницу между позициями NPC и игрока
-        delta_x = self.player.x - self.x
-        delta_y = self.player.y - self.y
+        if self.health > 0:
+            # Вычисляем разницу между позициями NPC и игрока
+            delta_x = self.player.x - self.x
+            delta_y = self.player.y - self.y
 
-        # Двигаемся по оси X сначала
-        if abs(delta_x) > abs(delta_y):
-            if delta_x > 0:
-                self.direction = self.anim_right
-                self.x += self.speed
+            # Двигаемся по оси X сначала
+            if abs(delta_x) > abs(delta_y):
+                if delta_x > 0:
+                    self.direction = self.anim_right
+                    self.x += self.speed
+                else:
+                    self.direction = self.anim_left
+                    self.x -= self.speed
+                # После движения по X, проверяем Y
+                if self.player.y > self.y:
+                    self.direction = self.anim_down
+                    self.y += self.speed
+                elif self.player.y < self.y:
+                    self.direction = self.anim_up
+                    self.y -= self.speed
             else:
-                self.direction = self.anim_left
-                self.x -= self.speed
-            # После движения по X, проверяем Y
-            if self.player.y > self.y:
-                self.direction = self.anim_down
-                self.y += self.speed
-            elif self.player.y < self.y:
-                self.direction = self.anim_up
-                self.y -= self.speed
-        else:
-            # Двигаемся по оси Y сначала
-            if delta_y > 0:
-                self.direction = self.anim_down
-                self.y += self.speed
-            else:
-                self.direction = self.anim_up
-                self.y -= self.speed
-            # После движения по Y, проверяем X
-            if self.player.x > self.x:
-                self.direction = self.anim_right
-                self.x += self.speed
-            elif self.player.x < self.x:
-                self.direction = self.anim_left
-                self.x -= self.speed
+                # Двигаемся по оси Y сначала
+                if delta_y > 0:
+                    self.direction = self.anim_down
+                    self.y += self.speed
+                else:
+                    self.direction = self.anim_up
+                    self.y -= self.speed
+                # После движения по Y, проверяем X
+                if self.player.x > self.x:
+                    self.direction = self.anim_right
+                    self.x += self.speed
+                elif self.player.x < self.x:
+                    self.direction = self.anim_left
+                    self.x -= self.speed
 
     def camera(self, key):
         if key[pygame.K_w]:
@@ -248,7 +254,17 @@ class Pickaxe(Item):
         self.speed = speed
 
     def return_parameters(self):
-        return [Text(f'Mining : {'I dont know'}', 20, ('Red'), 10, 20)]
+        return [Text(f'Speed : {str(self.speed)}', 20, ('Red'), 10, 20)]
+    
+class PoorQualityBow(Item):
+    def __init__(self, image):
+        super().__init__(image)
+        self.type = "bow"
+        self.attack = 10
+        self.speed = 1
+
+    def return_parameters(self):
+        return [Text(f'Attack : {str(self.attack)}', 20, ('Red'), 10, 20), Text(f'Speed : {str(self.speed)}', 20, ('Blue'), 35, 20)]
 
 class DropedItem:
     def __init__(self, x, y, image, item, player):
@@ -304,10 +320,11 @@ class Stone(MineObject):
         if self.player.rect.colliderect(self.rect):
             if self.rect.collidepoint(mouse.get_pos()[0], mouse.get_pos()[1]):
                 if mouse.get_pressed()[0]:
-                    if self.player.enable_inventory[0].type == 'pickaxe':
-                        if self.health > 0:
-                            self.health -= self.player.enable_inventory[0].speed
-                            print("ok")
+                    if len(self.player.enable_inventory) > 0:
+                        if self.player.enable_inventory[0].type == 'pickaxe':
+                            if self.health > 0:
+                                self.health -= self.player.enable_inventory[0].speed
+                                print("ok")
 
     def camera(self, key):
         if key[pygame.K_w]:
@@ -323,10 +340,10 @@ class Stone(MineObject):
             self.x -= self.player.speed
 
     def draw(self, screen):
-        Text(str(self.health), 15, 'Blue', self.x, self.y).draw(screen)
         self.rect.topleft = self.x, self.y
         print(self.health)
         if self.health > 0:
+            Text(str(self.health), 15, 'Blue', self.x, self.y).draw(screen)
             screen.blit(self.image, (self.x, self.y))
 
         self.camera(pygame.key.get_pressed())
